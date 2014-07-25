@@ -579,7 +579,7 @@ function skipComment() {
 }
 
 function commentCallback(start, index) {
- if (options.commentCallback)
+ if (options.commentCallback || options.attachComments)
     currentParser.handleComment(lineNumberTable.getSourceRange(start, index));
 }
 

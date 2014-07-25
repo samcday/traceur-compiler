@@ -111,6 +111,13 @@ export class ParseTree {
     this.location = location;
   }
 
+  attachLeadingComment(comment) {
+    if (!this.leadingComments) {
+      this.leadingComments = [];
+    }
+    this.leadingComments.push(comment);
+  }
+
   /** @return {boolean} */
   isPattern() {
     switch (this.type) {

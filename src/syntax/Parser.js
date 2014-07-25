@@ -14,6 +14,7 @@
 
 import {FindVisitor} from '../codegeneration/FindVisitor';
 import {IdentifierToken} from './IdentifierToken';
+import {Comment} from './Comment';
 import {
   ARRAY_LITERAL_EXPRESSION,
   BINDING_IDENTIFIER,
@@ -352,6 +353,17 @@ export class Parser {
     this.strictMode_ = false;
 
     this.annotations_ = [];
+
+    this.comments_ = [];
+  }
+
+  node_(node) {
+    // Attach accumulated comments as leading comments.
+    for (var i = 0 ; i < this.comments_.length; i++) {
+      node.attachLeadingComment(this.comments_[i]);
+    }
+    this.comments_ = [];
+    return node;
   }
 
   // 14 Script
@@ -1236,7 +1248,7 @@ export class Parser {
     }
 
     this.eatPossibleImplicitSemiColon_();
-    return new ExpressionStatement(this.getTreeLocation_(start), expression);
+    return this.node_(new ExpressionStatement(this.getTreeLocation_(start), expression));
   }
 
   // 12.5 If Statement
@@ -3993,7 +4005,8 @@ export class Parser {
   }
 
   handleComment(range) {
-    // TODO(arv): Attach to tree nodes.
+    var comment = new Comment(range);
+    this.comments_.push(comment);
   }
 
   /**
