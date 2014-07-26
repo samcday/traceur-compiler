@@ -60,17 +60,4 @@ suite('parser.js', function() {
     assert.equal(comments[1].end.column, 9);
     assert.equal(comments[1].toString(), '/* DDD */');
   });
-
-  test('attaching comments', function() {
-    traceur.options.attachComments = true;
-
-    var program = '//foo\nbar;';
-
-    var sourceFile = new traceur.syntax.SourceFile('Name', program);
-    var parser = new traceur.syntax.Parser(sourceFile, errorReporter);
-    var ast = parser.parseScript();
-
-    assert.equal(ast.scriptItemList[0].leadingComments[0].content(), "//foo\n");
-    console.log(ast);
-  });
 });

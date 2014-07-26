@@ -26,6 +26,7 @@ import {
   LITERAL_PROPERTY_NAME,
   OBJECT_LITERAL_EXPRESSION,
   REST_PARAMETER,
+  SCRIPT,
   SYNTAX_ERROR_TREE
 } from './trees/ParseTreeType';
 import {
@@ -355,14 +356,59 @@ export class Parser {
     this.annotations_ = [];
 
     this.comments_ = [];
+    this.commentNode_ = undefined;
   }
 
   node_(node) {
-    // Attach accumulated comments as leading comments.
-    for (var i = 0 ; i < this.comments_.length; i++) {
-      node.attachLeadingComment(this.comments_[i]);
+    var last = this.commentNode_, i, len, comment;
+
+    console.log("Me.", node.type, "start", node.location.start.offset, "end", node.location.end.offset);
+
+    if (last && node.type !== SCRIPT && node.type !== MODULE) {
+      console.log("Last.", last.type, "start", last.location.start.offset, "end", last.location.end.offset);
+      // If this node has a range that is earlier than last node we attached
+      // comments to, and after the end of the comment range, we move the 
+      // comment on to this node instead.
+      if (last.location.start.offset > node.location.start.offset &&
+          last.leadingComments) {
+        for (len = last.leadingComments.length, i = len - 1; i >=0; i--) {
+          comment = last.leadingComments[i];
+          if (comment.location.end.offset < node.location.start.offset) {
+            node.attachLeadingComment(comment);
+            last.leadingComments.length = i;
+          } else {
+            break;
+          }
+        }
+      }
+
+      // If this node extends past last node, then we shuffle all trailing
+      // comments on that node to this one.
+      if (last.location.end.offset <= node.location.end.offset && last.trailingComments) {
+        for (var trailing of last.detachTrailingComments()) {
+          node.attachTrailingComment(trailing);
+        }
+      }
+    }
+
+    // Attach accumulated comments on current node.
+    for (i = 0 ; i < this.comments_.length; i++) {
+      comment = this.comments_[i];
+
+      // If our range end stops before comment start, then it's a trailing comment.
+      if (node.location.end.offset <= comment.location.start.offset) {
+        node.attachTrailingComment(comment);
+      } else {
+        node.attachLeadingComment(comment);
+
+        if (last) {
+          last.attachTrailingComment(this.comments_[i]);
+        }
+      }
+
     }
     this.comments_ = [];
+    this.commentNode_ = node;
     return node;
   }
 
@@ -375,7 +421,7 @@ export class Parser {
     var start = this.getTreeStartLocation_();
     var scriptItemList = this.parseScriptItemList_();
     this.eat_(END_OF_FILE);
-    return new Script(this.getTreeLocation_(start), scriptItemList);
+    return this.node_(new Script(this.getTreeLocation_(start), scriptItemList));
   }
 
   // ScriptItemList :
@@ -1212,8 +1258,8 @@ export class Parser {
       if (functionToken !== null)
         return this.parseAsyncFunctionDeclaration_(asyncToken);
 
-      expression = new IdentifierExpression(this.getTreeLocation_(start),
-                                            asyncToken);
+      expression = this.node_(new IdentifierExpression(this.getTreeLocation_(start),
+                                                       asyncToken));
     } else {
       expression = this.parseExpression();
     }
@@ -1848,7 +1894,7 @@ export class Parser {
   parseIdentifierExpression_() {
     var start = this.getTreeStartLocation_();
     var identifier = this.eatId_();
-    return new IdentifierExpression(this.getTreeLocation_(start), identifier);
+    return this.node_(new IdentifierExpression(this.getTreeLocation_(start), identifier));
   }
 
   /**
@@ -1859,7 +1905,7 @@ export class Parser {
   parseIdentifierNameExpression_() {
     var start = this.getTreeStartLocation_();
     var identifier = this.eatIdName_();
-    return new IdentifierExpression(this.getTreeLocation_(start), identifier);
+    return this.node_(new IdentifierExpression(this.getTreeLocation_(start), identifier));
   }
 
   /**
@@ -2401,7 +2447,7 @@ export class Parser {
       while (this.eatIf_(COMMA)) {
         expressions.push(this.parseAssignmentExpression(expressionIn));
       }
-      return new CommaExpression(this.getTreeLocation_(start), expressions);
+      return this.node_(new CommaExpression(this.getTreeLocation_(start), expressions));
     }
 
     return expression;
@@ -4005,6 +4051,7 @@ export class Parser {
   }
 
   handleComment(range) {
+    console.log("comment!", range);
     var comment = new Comment(range);
     this.comments_.push(comment);
   }

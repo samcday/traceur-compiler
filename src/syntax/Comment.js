@@ -19,16 +19,16 @@
  */
 
 export class Comment {
-  constructor(range) {
-    this.range = range;
+  constructor(location) {
+    this.location = location;
     this.content_ = null;
   }
 
   // Content of a comment includes the comment delimiter (// or /* */)
   content() {
     if (!this.content_) {
-      var sourceContent = this.range.start.source.contents;
-      this.content_ = sourceContent.substring(this.range.start.offset, this.range.end.offset);
+      var sourceContent = this.location.start.source.contents;
+      this.content_ = sourceContent.substring(this.location.start.offset, this.location.end.offset);
     }
     return this.content_;
   }

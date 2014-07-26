@@ -118,6 +118,19 @@ export class ParseTree {
     this.leadingComments.push(comment);
   }
 
+  attachTrailingComment(comment) {
+    if (!this.trailingComments) {
+      this.trailingComments = [];
+    }
+    this.trailingComments.push(comment);
+  }
+
+  detachTrailingComments() {
+    var trailing = this.trailingComments;
+    delete this.trailingComments;
+    return trailing;
+  }
+
   /** @return {boolean} */
   isPattern() {
     switch (this.type) {
